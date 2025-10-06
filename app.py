@@ -16,7 +16,7 @@ CORS(app)
 
 # Конфигурация
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "llama3.2:3b"
+MODEL_NAME = "mistral:7b"
 DATABASE_PATH = "chat_history.db"
 
 # Инициализация базы данных
@@ -92,10 +92,11 @@ TASK TYPES:
 
 RULES:
 1. Return ONLY JSON without additional text
-2. If multiple tasks - return JSON array
+2. If multiple tasks - return JSON array (MAX 3 items)
 3. All texts in Russian language
 4. Use correct dates
 5. Create detailed descriptions
+6. Focus ONLY on what user actually mentioned
 
 Example:
 {{"type": "task", "title": "Task name", "description": "Detailed description", "priority": "high", "tags": ["tag"], "dueDate": "{tomorrow_datetime}"}}
