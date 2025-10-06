@@ -1005,7 +1005,10 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ 
+                        message: message,
+                        json_mode: jsonMode 
+                    })
                 });
                 
                 const data = await response.json();
@@ -1013,8 +1016,9 @@
                 if (data.error) {
                     showError(data.error);
                 } else {
-                    // Handle structured JSON response
+                    // Handle response based on type
                     if (data.type === 'structured_json') {
+                        // JSON режим - показываем структурированные данные
                         const responseData = data.response;
                         const jsonString = JSON.stringify(responseData, null, 2);
                         let displayText = '';
@@ -1046,7 +1050,7 @@
                         contentElement.dataset.originalJson = jsonString;
                         contentElement.dataset.formattedText = displayText.trim();
                     } else {
-                        // Regular text response
+                        // Обычный режим - показываем текст как есть
                         addMessageWithTyping(data.response, 'ai');
                     }
                 }

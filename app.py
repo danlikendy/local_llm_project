@@ -61,9 +61,16 @@ def save_message(session_id, user_message, ai_response):
     conn.commit()
     conn.close()
 
-# Structured prompt for Voicaj LLM Schema
+# Обычный промпт для чистого чата
+NORMAL_PROMPT = """
+Ты дружелюбный AI ассистент. Отвечай на русском языке естественно и полезно. Помогай пользователю с любыми вопросами и задачами.
+"""
+
+# Структурированный промпт для Voicaj LLM Schema
 VOICAJ_PROMPT = """
 Ты Voicaj AI ассистент. ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА - возвращать ТОЛЬКО валидный JSON согласно Voicaj LLM Schema.
+
+ВАЖНО: Текущая дата и время: {current_datetime}
 
 Доступные типы:
 - task: задачи, дедлайны, напоминания, рабочие дела
@@ -89,22 +96,54 @@ VOICAJ_PROMPT = """
 4. Если несколько смыслов - возвращай массив JSON объектов
 5. Все поля title, description, tags на русском языке
 6. Создавай МАКСИМАЛЬНО ПОДРОБНЫЕ описания используя контекст
+7. ВСЕГДА используй ТЕКУЩУЮ дату и время: {current_datetime}
+8. Для завтра используй: {tomorrow_datetime}
+9. Для послезавтра используй: {day_after_tomorrow_datetime}
+10. Для конца недели используй: {end_of_week_datetime}
+11. Для следующей недели используй: {next_week_datetime}
 
 Пример ответа:
-{"type": "task", "title": "Завершить отчет", "description": "Детальное описание задачи с учетом контекста", "priority": "high", "tags": ["работа"], "dueDate": "2025-01-10 17:00", "address": null}
+{{"type": "task", "title": "Завершить отчет", "description": "Детальное описание задачи с учетом контекста", "priority": "high", "tags": ["работа"], "dueDate": "{tomorrow_datetime}", "address": null}}
 """
 
 # Отправка запроса к Ollama
-def send_to_ollama(message, history=None):
+def send_to_ollama(message, history=None, json_mode=False):
     try:
+        # Получаем текущую дату и время
+        from datetime import datetime, timedelta
+        now = datetime.now()
+        tomorrow = now + timedelta(days=1)
+        day_after_tomorrow = now + timedelta(days=2)
+        end_of_week = now + timedelta(days=(6 - now.weekday()))  # Пятница
+        next_week = now + timedelta(days=7)
+        
+        # Форматируем даты для промпта
+        current_datetime = now.strftime("%Y-%m-%d %H:%M")
+        tomorrow_datetime = tomorrow.strftime("%Y-%m-%d %H:%M")
+        day_after_tomorrow_datetime = day_after_tomorrow.strftime("%Y-%m-%d %H:%M")
+        end_of_week_datetime = end_of_week.strftime("%Y-%m-%d 18:00")
+        next_week_datetime = next_week.strftime("%Y-%m-%d %H:%M")
+        
         # Формируем контекст из истории
         context = ""
         if history:
             for user_msg, ai_msg, _ in reversed(history):
                 context += f"User: {user_msg}\nAssistant: {ai_msg}\n\n"
         
-        # Подготавливаем полное сообщение с контекстом и схемой
-        full_message = VOICAJ_PROMPT + "\n\n" + context + f"User: {message}\nAssistant:"
+        # Выбираем промпт в зависимости от режима
+        if json_mode:
+            # Подготавливаем промпт с актуальными датами для JSON режима
+            prompt_with_dates = VOICAJ_PROMPT.format(
+                current_datetime=current_datetime,
+                tomorrow_datetime=tomorrow_datetime,
+                day_after_tomorrow_datetime=day_after_tomorrow_datetime,
+                end_of_week_datetime=end_of_week_datetime,
+                next_week_datetime=next_week_datetime
+            )
+            full_message = prompt_with_dates + "\n\n" + context + f"User: {message}\nAssistant:"
+        else:
+            # Обычный режим - чистый чат
+            full_message = NORMAL_PROMPT + "\n\n" + context + f"User: {message}\nAssistant:"
         
         payload = {
             "model": MODEL_NAME,
@@ -125,54 +164,59 @@ def send_to_ollama(message, history=None):
             result = response.json()
             raw_response = result.get('response', '')
             
-            # Try to parse JSON response
-            try:
-                # Clean the response and try to parse JSON
-                cleaned_response = raw_response.strip()
-                
-                # Remove any text after the JSON (like "User:" or "Assistant:")
-                if "User:" in cleaned_response:
-                    cleaned_response = cleaned_response.split("User:")[0].strip()
-                if "Assistant:" in cleaned_response:
-                    cleaned_response = cleaned_response.split("Assistant:")[0].strip()
-                
-                # If multiple JSON blocks, split by empty lines
-                if '\n\n' in cleaned_response:
-                    json_blocks = cleaned_response.split('\n\n')
-                    parsed_blocks = []
-                    for block in json_blocks:
-                        block = block.strip()
-                        if block and block.startswith('{'):
-                            try:
-                                parsed_blocks.append(json.loads(block))
-                            except json.JSONDecodeError:
-                                continue
-                    if parsed_blocks:
-                        return parsed_blocks if len(parsed_blocks) > 1 else parsed_blocks[0]
-                else:
-                    # Single JSON block - find the first complete JSON object
-                    if cleaned_response.startswith('{'):
-                        # Find the end of the JSON object
-                        brace_count = 0
-                        json_end = 0
-                        for i, char in enumerate(cleaned_response):
-                            if char == '{':
-                                brace_count += 1
-                            elif char == '}':
-                                brace_count -= 1
-                                if brace_count == 0:
-                                    json_end = i + 1
-                                    break
-                        
-                        if json_end > 0:
-                            json_str = cleaned_response[:json_end]
-                            return json.loads(json_str)
+            # Обработка ответа в зависимости от режима
+            if json_mode:
+                # JSON режим - пытаемся распарсить JSON
+                try:
+                    # Clean the response and try to parse JSON
+                    cleaned_response = raw_response.strip()
                     
-            except json.JSONDecodeError:
-                pass
-                
-            # If JSON parsing fails, return raw response
-            return {"error": "Failed to parse JSON", "raw_response": raw_response}
+                    # Remove any text after the JSON (like "User:" or "Assistant:")
+                    if "User:" in cleaned_response:
+                        cleaned_response = cleaned_response.split("User:")[0].strip()
+                    if "Assistant:" in cleaned_response:
+                        cleaned_response = cleaned_response.split("Assistant:")[0].strip()
+                    
+                    # If multiple JSON blocks, split by empty lines
+                    if '\n\n' in cleaned_response:
+                        json_blocks = cleaned_response.split('\n\n')
+                        parsed_blocks = []
+                        for block in json_blocks:
+                            block = block.strip()
+                            if block and block.startswith('{'):
+                                try:
+                                    parsed_blocks.append(json.loads(block))
+                                except json.JSONDecodeError:
+                                    continue
+                        if parsed_blocks:
+                            return parsed_blocks if len(parsed_blocks) > 1 else parsed_blocks[0]
+                    else:
+                        # Single JSON block - find the first complete JSON object
+                        if cleaned_response.startswith('{'):
+                            # Find the end of the JSON object
+                            brace_count = 0
+                            json_end = 0
+                            for i, char in enumerate(cleaned_response):
+                                if char == '{':
+                                    brace_count += 1
+                                elif char == '}':
+                                    brace_count -= 1
+                                    if brace_count == 0:
+                                        json_end = i + 1
+                                        break
+                            
+                            if json_end > 0:
+                                json_str = cleaned_response[:json_end]
+                                return json.loads(json_str)
+                        
+                except json.JSONDecodeError:
+                    pass
+                    
+                # If JSON parsing fails, return raw response
+                return {"error": "Failed to parse JSON", "raw_response": raw_response}
+            else:
+                # Обычный режим - возвращаем текст как есть
+                return raw_response.strip()
         else:
             return {"error": f"API Error: {response.status_code}"}
             
@@ -193,6 +237,7 @@ def chat():
         # Ensure proper encoding for Russian text
         data = request.get_json(force=True)
         message = data.get('message', '').strip()
+        json_mode = data.get('json_mode', False)  # Получаем режим из запроса
         
         if not message:
             return jsonify({'error': 'Message cannot be empty'}), 400
@@ -201,17 +246,21 @@ def chat():
         session_id = session.get('session_id', str(uuid.uuid4()))
         history = get_conversation_history(session_id, limit=20)
         
-        # Send request to Ollama
-        response = send_to_ollama(message, history)
+        # Send request to Ollama with режимом
+        response = send_to_ollama(message, history, json_mode)
         
         # Save to database (convert response to string for storage)
         response_str = json.dumps(response) if isinstance(response, (dict, list)) else str(response)
         save_message(session_id, message, response_str)
         
+        # Определяем тип ответа
+        response_type = 'structured_json' if json_mode else 'text'
+        
         return jsonify({
             'response': response,
             'session_id': session_id,
-            'type': 'structured_json'
+            'type': response_type,
+            'json_mode': json_mode
         })
         
     except Exception as e:
