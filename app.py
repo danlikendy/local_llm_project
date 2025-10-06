@@ -16,7 +16,7 @@ CORS(app)
 
 # Конфигурация
 OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "llama3.1:8b"
+MODEL_NAME = "llama3.2:3b"
 DATABASE_PATH = "chat_history.db"
 
 # Инициализация базы данных
@@ -68,42 +68,37 @@ NORMAL_PROMPT = """
 
 # Структурированный промпт для Voicaj LLM Schema
 VOICAJ_PROMPT = """
-Ты Voicaj AI ассистент. ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА - возвращать ТОЛЬКО валидный JSON согласно Voicaj LLM Schema.
+You are an AI assistant. Respond ONLY with valid JSON in Russian language.
 
-ВАЖНО: Текущая дата и время: {current_datetime}
+Current date: {current_datetime}
+Tomorrow: {tomorrow_datetime}
 
-Доступные типы:
-- task: задачи, дедлайны, напоминания, рабочие дела
-- diary_entry: личные заметки, размышления, эмоциональные выражения
-- habit: повторяющиеся действия, цели, отслеживание привычек
-- health: показатели здоровья, сон, шаги, пульс
-- workout: физические активности, упражнения, фитнес
-- meal: логирование еды, приемы пищи, калории
-- goal: долгосрочные цели, достижения
-- advice: коучинг, запросы помощи, рекомендации
-- study_note: обучение, лекции, учебные материалы
-- time_log: учет времени, логирование активности
-- shared_task: совместные задачи, командная работа
-- focus_session: pomodoro, глубокие рабочие сессии
-- mood_entry: отслеживание эмоционального состояния
-- expense: финансовые транзакции, покупки
-- travel_plan: поездки, отпуска, планирование путешествий
+TASK TYPES:
+- task: any tasks, work, reminders
+- diary_entry: personal notes, emotions, thoughts
+- habit: habits, recurring actions
+- health: health, sleep, activity
+- workout: training, sports
+- meal: food, nutrition
+- goal: goals, achievements
+- advice: advice, help
+- study_note: study, learning
+- time_log: time tracking
+- shared_task: collaborative tasks
+- focus_session: work sessions
+- mood_entry: mood tracking
+- expense: expenses, finances
+- travel_plan: trips
 
-КРИТИЧЕСКИ ВАЖНО:
-1. НИКОГДА не добавляй текст до или после JSON
-2. НИКОГДА не объясняй что ты делаешь
-3. Возвращай ТОЛЬКО валидный JSON объект
-4. Если несколько смыслов - возвращай массив JSON объектов
-5. Все поля title, description, tags на русском языке
-6. Создавай МАКСИМАЛЬНО ПОДРОБНЫЕ описания используя контекст
-7. ВСЕГДА используй ТЕКУЩУЮ дату и время: {current_datetime}
-8. Для завтра используй: {tomorrow_datetime}
-9. Для послезавтра используй: {day_after_tomorrow_datetime}
-10. Для конца недели используй: {end_of_week_datetime}
-11. Для следующей недели используй: {next_week_datetime}
+RULES:
+1. Return ONLY JSON without additional text
+2. If multiple tasks - return JSON array
+3. All texts in Russian language
+4. Use correct dates
+5. Create detailed descriptions
 
-Пример ответа:
-{{"type": "task", "title": "Завершить отчет", "description": "Детальное описание задачи с учетом контекста", "priority": "high", "tags": ["работа"], "dueDate": "{tomorrow_datetime}", "address": null}}
+Example:
+{{"type": "task", "title": "Task name", "description": "Detailed description", "priority": "high", "tags": ["tag"], "dueDate": "{tomorrow_datetime}"}}
 """
 
 # Отправка запроса к Ollama
@@ -150,15 +145,16 @@ def send_to_ollama(message, history=None, json_mode=False):
             "prompt": full_message,
             "stream": False,
             "options": {
-                "temperature": 0.1,  # Very low temperature for consistent JSON
-                "top_p": 0.8,
-                "max_tokens": 1024
+                "temperature": 0.3,  # Slightly higher for better Russian text
+                "top_p": 0.9,
+                "max_tokens": 2048
             }
         }
         
         response = requests.post(f"{OLLAMA_URL}/api/generate", 
                                json=payload, 
-                               timeout=120)
+                               timeout=120,
+                               headers={'Content-Type': 'application/json; charset=utf-8'})
         
         if response.status_code == 200:
             result = response.json()
@@ -235,6 +231,7 @@ def index():
 def chat():
     try:
         # Ensure proper encoding for Russian text
+        request.charset = 'utf-8'
         data = request.get_json(force=True)
         message = data.get('message', '').strip()
         json_mode = data.get('json_mode', False)  # Получаем режим из запроса
