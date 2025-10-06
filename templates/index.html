@@ -247,6 +247,28 @@
             z-index: 2;
         }
 
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .json-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--cream);
+            font-weight: 500;
+        }
+
+        .json-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary-brown);
+        }
+
         .clear-btn {
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
@@ -878,7 +900,13 @@
         <div class="chat-container">
             <div class="chat-header">
                 <h2>Чат с AI</h2>
-                <button class="clear-btn" onclick="clearHistory()">Очистить</button>
+                <div class="header-controls">
+                    <label class="json-toggle">
+                        <input type="checkbox" id="jsonMode" onchange="toggleJsonMode()">
+                        <span>JSON Mode</span>
+                    </label>
+                    <button class="clear-btn" onclick="clearHistory()">Очистить</button>
+                </div>
             </div>
             
             <div class="chat-messages" id="chatMessages">
@@ -934,6 +962,23 @@
 
     <script>
         let isLoading = false;
+        let jsonMode = false;
+
+        function toggleJsonMode() {
+            jsonMode = document.getElementById('jsonMode').checked;
+            // Перезагружаем последние сообщения в новом режиме
+            const messages = document.querySelectorAll('.message.ai');
+            messages.forEach(message => {
+                const content = message.querySelector('.message-content');
+                if (content.dataset.originalJson) {
+                    if (jsonMode) {
+                        content.innerHTML = `<pre>${content.dataset.originalJson}</pre>`;
+                    } else {
+                        content.innerHTML = content.dataset.formattedText;
+                    }
+                }
+            });
+        }
 
         function handleKeyPress(event) {
             if (event.key === 'Enter' && !isLoading) {
@@ -971,6 +1016,7 @@
                     // Handle structured JSON response
                     if (data.type === 'structured_json') {
                         const responseData = data.response;
+                        const jsonString = JSON.stringify(responseData, null, 2);
                         let displayText = '';
                         
                         if (Array.isArray(responseData)) {
@@ -994,7 +1040,11 @@
                             if (responseData.dueDate) displayText += `Срок: ${responseData.dueDate}\n`;
                         }
                         
-                        addMessageWithTyping(displayText.trim(), 'ai');
+                        // Сохраняем оба варианта для переключения
+                        const messageElement = addMessageWithTyping(jsonMode ? jsonString : displayText.trim(), 'ai');
+                        const contentElement = messageElement.querySelector('.message-content');
+                        contentElement.dataset.originalJson = jsonString;
+                        contentElement.dataset.formattedText = displayText.trim();
                     } else {
                         // Regular text response
                         addMessageWithTyping(data.response, 'ai');
@@ -1158,6 +1208,7 @@
             }
             
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return messageDiv;
         }
     </script>
 </body>
