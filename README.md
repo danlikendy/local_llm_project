@@ -272,11 +272,3 @@ New-NetFirewallRule -DisplayName "Voicaj AI Assistant" -Direction Inbound -Proto
 ### Обновление приложения
 - Замените файлы `app.py` и `templates/index.html`
 - Перезапустите сервер
-
-<<<<<<< HEAD
----
-
-**Поздравляем! Ваш Voicaj LLM API сервер готов для интеграции с iOS!**
-=======
-**Поздравляем! Ваш локальный AI ассистент готов к работе!**
->>>>>>> c34b88ec10cefd61ef3fd2b8a827040f83a93070
