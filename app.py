@@ -2,21 +2,25 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
+import io
 import json
 import sqlite3
-import requests
+import uuid
 from datetime import datetime
 from flask import Flask, render_template, request, jsonify, session
 from flask_cors import CORS
-import uuid
+
+# Fix console encoding for Windows
+if sys.platform.startswith('win'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
 CORS(app)
 
 # Конфигурация
-OLLAMA_URL = "http://localhost:11434"
-MODEL_NAME = "mistral:7b"
 DATABASE_PATH = "chat_history.db"
 
 # Инициализация базы данных
@@ -61,165 +65,38 @@ def save_message(session_id, user_message, ai_response):
     conn.commit()
     conn.close()
 
-# Обычный промпт для чистого чата
-NORMAL_PROMPT = """
-Ты дружелюбный AI ассистент. Отвечай на русском языке естественно и полезно. Помогай пользователю с любыми вопросами и задачами.
-"""
+# Voicaj LLM теперь обрабатывает все самостоятельно
 
-# Структурированный промпт для Voicaj LLM Schema
-VOICAJ_PROMPT = """
-You are an AI assistant. Respond ONLY with valid JSON in Russian language.
+# Импорт нашей гибридной LLM с обучением
+from hybrid_voicaj_llm import HybridVoicajLLM
 
-Current date: {current_datetime}
-Tomorrow: {tomorrow_datetime}
+# Создаем экземпляр гибридной Voicaj LLM
+voicaj_llm = HybridVoicajLLM()
 
-TASK TYPES:
-- task: any tasks, work, reminders
-- diary_entry: personal notes, emotions, thoughts
-- habit: habits, recurring actions
-- health: health, sleep, activity
-- workout: training, sports
-- meal: food, nutrition
-- goal: goals, achievements
-- advice: advice, help
-- study_note: study, learning
-- time_log: time tracking
-- shared_task: collaborative tasks
-- focus_session: work sessions
-- mood_entry: mood tracking
-- expense: expenses, finances
-- travel_plan: trips
-
-RULES:
-1. Return ONLY JSON without additional text
-2. If multiple tasks - return JSON array (MAX 3 items)
-3. All texts in Russian language
-4. Use correct dates
-5. Create detailed descriptions
-6. Focus ONLY on what user actually mentioned
-
-Example:
-{{"type": "task", "title": "Task name", "description": "Detailed description", "priority": "high", "tags": ["tag"], "dueDate": "{tomorrow_datetime}"}}
-"""
-
-# Отправка запроса к Ollama
-def send_to_ollama(message, history=None, json_mode=False):
+# Обработка сообщений
+def process_message(message, history=None, json_mode=False):
     try:
-        # Получаем текущую дату и время
-        from datetime import datetime, timedelta
-        now = datetime.now()
-        tomorrow = now + timedelta(days=1)
-        day_after_tomorrow = now + timedelta(days=2)
-        end_of_week = now + timedelta(days=(6 - now.weekday()))  # Пятница
-        next_week = now + timedelta(days=7)
-        
-        # Форматируем даты для промпта
-        current_datetime = now.strftime("%Y-%m-%d %H:%M")
-        tomorrow_datetime = tomorrow.strftime("%Y-%m-%d %H:%M")
-        day_after_tomorrow_datetime = day_after_tomorrow.strftime("%Y-%m-%d %H:%M")
-        end_of_week_datetime = end_of_week.strftime("%Y-%m-%d 18:00")
-        next_week_datetime = next_week.strftime("%Y-%m-%d %H:%M")
-        
-        # Формируем контекст из истории
-        context = ""
-        if history:
-            for user_msg, ai_msg, _ in reversed(history):
-                context += f"User: {user_msg}\nAssistant: {ai_msg}\n\n"
-        
-        # Выбираем промпт в зависимости от режима
+        # Выбираем режим обработки
         if json_mode:
-            # Подготавливаем промпт с актуальными датами для JSON режима
-            prompt_with_dates = VOICAJ_PROMPT.format(
-                current_datetime=current_datetime,
-                tomorrow_datetime=tomorrow_datetime,
-                day_after_tomorrow_datetime=day_after_tomorrow_datetime,
-                end_of_week_datetime=end_of_week_datetime,
-                next_week_datetime=next_week_datetime
-            )
-            full_message = prompt_with_dates + "\n\n" + context + f"User: {message}\nAssistant:"
-        else:
-            # Обычный режим - чистый чат
-            full_message = NORMAL_PROMPT + "\n\n" + context + f"User: {message}\nAssistant:"
-        
-        payload = {
-            "model": MODEL_NAME,
-            "prompt": full_message,
-            "stream": False,
-            "options": {
-                "temperature": 0.3,  # Slightly higher for better Russian text
-                "top_p": 0.9,
-                "max_tokens": 2048
-            }
-        }
-        
-        response = requests.post(f"{OLLAMA_URL}/api/generate", 
-                               json=payload, 
-                               timeout=120,
-                               headers={'Content-Type': 'application/json; charset=utf-8'})
-        
-        if response.status_code == 200:
-            result = response.json()
-            raw_response = result.get('response', '')
+            # Используем нашу Voicaj LLM для JSON режима
+            print(f"DEBUG: Processing message: {message[:50]}...")
             
-            # Обработка ответа в зависимости от режима
-            if json_mode:
-                # JSON режим - пытаемся распарсить JSON
-                try:
-                    # Clean the response and try to parse JSON
-                    cleaned_response = raw_response.strip()
-                    
-                    # Remove any text after the JSON (like "User:" or "Assistant:")
-                    if "User:" in cleaned_response:
-                        cleaned_response = cleaned_response.split("User:")[0].strip()
-                    if "Assistant:" in cleaned_response:
-                        cleaned_response = cleaned_response.split("Assistant:")[0].strip()
-                    
-                    # If multiple JSON blocks, split by empty lines
-                    if '\n\n' in cleaned_response:
-                        json_blocks = cleaned_response.split('\n\n')
-                        parsed_blocks = []
-                        for block in json_blocks:
-                            block = block.strip()
-                            if block and block.startswith('{'):
-                                try:
-                                    parsed_blocks.append(json.loads(block))
-                                except json.JSONDecodeError:
-                                    continue
-                        if parsed_blocks:
-                            return parsed_blocks if len(parsed_blocks) > 1 else parsed_blocks[0]
-                    else:
-                        # Single JSON block - find the first complete JSON object
-                        if cleaned_response.startswith('{'):
-                            # Find the end of the JSON object
-                            brace_count = 0
-                            json_end = 0
-                            for i, char in enumerate(cleaned_response):
-                                if char == '{':
-                                    brace_count += 1
-                                elif char == '}':
-                                    brace_count -= 1
-                                    if brace_count == 0:
-                                        json_end = i + 1
-                                        break
-                            
-                            if json_end > 0:
-                                json_str = cleaned_response[:json_end]
-                                return json.loads(json_str)
-                        
-                except json.JSONDecodeError:
-                    pass
-                    
-                # If JSON parsing fails, return raw response
-                return {"error": "Failed to parse JSON", "raw_response": raw_response}
-            else:
-                # Обычный режим - возвращаем текст как есть
-                return raw_response.strip()
-        else:
-            return {"error": f"API Error: {response.status_code}"}
+            # Сначала проверим, какие типы обнаружены
+            detected_types = voicaj_llm._detect_types(message.lower())
+            print(f"DEBUG: Detected types: {detected_types}")
             
-    except requests.exceptions.RequestException as e:
-        return {"error": f"Connection error to Ollama: {str(e)}"}
+            result = voicaj_llm.analyze_text(message)
+            print(f"DEBUG: Voicaj LLM returned {len(result)} objects")
+            print(f"DEBUG: Object types: {[obj['type'] for obj in result]}")
+            return result
+        else:
+            # Обычный режим - простой ответ
+            return f"Получено сообщение: {message}"
+            
     except Exception as e:
+        print(f"DEBUG: Exception occurred: {e}")
+        import traceback
+        traceback.print_exc()
         return {"error": f"Unexpected error: {str(e)}"}
 
 @app.route('/')
@@ -244,8 +121,15 @@ def chat():
         session_id = session.get('session_id', str(uuid.uuid4()))
         history = get_conversation_history(session_id, limit=20)
         
-        # Send request to Ollama with режимом
-        response = send_to_ollama(message, history, json_mode)
+        # Send request to Voicaj LLM
+        response = process_message(message, history, json_mode)
+        
+        print(f"DEBUG: process_message returned type: {type(response)}")
+        print(f"DEBUG: process_message returned {len(response) if isinstance(response, list) else 1} objects")
+        if isinstance(response, list):
+            print(f"DEBUG: Response is a list with {len(response)} items")
+            for i, item in enumerate(response):
+                print(f"DEBUG: Item {i}: type={item.get('type', 'unknown')}")
         
         # Save to database (convert response to string for storage)
         response_str = json.dumps(response) if isinstance(response, (dict, list)) else str(response)
@@ -296,6 +180,29 @@ def clear_history():
     
     return jsonify({'message': 'История очищена'})
 
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    """Принимает обратную связь для обучения модели"""
+    try:
+        data = request.get_json(force=True)
+        user_input = data.get('user_input', '')
+        model_output = data.get('model_output', [])
+        feedback = data.get('feedback', '')
+        
+        if not user_input or not feedback:
+            return jsonify({'error': 'Необходимы user_input и feedback'}), 400
+        
+        # Используем новую систему улучшения
+        improved_output = voicaj_llm.improve_from_feedback(user_input, model_output, feedback)
+        
+        return jsonify({
+            'message': 'Обратная связь принята и модель улучшена',
+            'improved_output': improved_output
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/models')
 def get_models():
     try:
@@ -312,7 +219,7 @@ if __name__ == '__main__':
     init_db()
     print("Starting local AI assistant...")
     print(f"Web interface will be available at: http://localhost:5000")
-    print(f"Ollama connection: {OLLAMA_URL}")
+    print("Using Hybrid Voicaj LLM model (Rule-based + Neural Network)")
     print(f"Database: {DATABASE_PATH}")
     print("=" * 50)
     

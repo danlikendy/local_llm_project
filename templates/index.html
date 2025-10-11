@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Локальный AI Ассистент</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voicaj LLM</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -19,331 +19,332 @@
             --cream: #FFF8DC;
             --dark-brown: #654321;
             --gold: #DAA520;
-            --glass-bg: rgba(255, 248, 220, 0.1);
-            --glass-border: rgba(255, 255, 255, 0.2);
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --bg-tertiary: #1a1a1a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-tertiary: #666666;
+            --border-primary: #2a2a2a;
+            --border-secondary: #333333;
+            --accent-primary: #8B4513;
+            --accent-secondary: #D2B48C;
+            --accent-gold: #DAA520;
         }
 
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #8B4513 0%, #D2B48C 25%, #F5F5DC 50%, #D2B48C 75%, #654321 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow-x: hidden;
-            -webkit-text-size-adjust: 100%;
-            -ms-text-size-adjust: 100%;
+            line-height: 1.6;
         }
 
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Floating particles */
-        .particles {
+        /* Background pattern */
+        body::before {
+            content: '';
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none;
-            z-index: 1;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(139, 69, 19, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(210, 180, 140, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(218, 165, 32, 0.02) 0%, transparent 50%);
+            z-index: -1;
         }
 
-        .particle {
-            position: absolute;
-            background: rgba(255, 248, 220, 0.3);
-            border-radius: 50%;
-            animation: float 20s infinite linear;
-        }
-
-        @keyframes float {
-            0% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10% {
-                opacity: 1;
-            }
-            90% {
-                opacity: 1;
-            }
-            100% {
-                transform: translateY(-100vh) rotate(360deg);
-                opacity: 0;
-            }
-        }
-
+        /* Header */
         .header {
-            background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 2rem;
-            border-bottom: 1px solid var(--glass-border);
-            position: relative;
-            z-index: 10;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        }
-
-        .header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: shimmer 3s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0%, 100% { transform: translateX(-100%); }
-            50% { transform: translateX(100%); }
+            padding: 2rem 0 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-primary);
         }
 
         .header h1 {
-            color: var(--cream);
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-            position: relative;
-            z-index: 2;
-            animation: titleGlow 2s ease-in-out infinite alternate;
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-gold), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.02em;
         }
 
-        @keyframes titleGlow {
-            from { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), 0 0 20px var(--gold); }
-            to { text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3), 0 0 30px var(--gold), 0 0 40px var(--gold); }
+        .header .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            margin-bottom: 2rem;
         }
 
         .status-bar {
             display: flex;
-            justify-content: space-between;
+            justify-content: center;
             align-items: center;
-            margin-top: 1rem;
-            color: var(--cream);
-            font-size: 1rem;
-            position: relative;
-            z-index: 2;
+            gap: 1.5rem;
+            flex-wrap: wrap;
         }
 
-        .status-indicator {
+        .status-item {
             display: flex;
             align-items: center;
-            gap: 0.8rem;
-            background: var(--glass-bg);
+            gap: 0.5rem;
             padding: 0.5rem 1rem;
-            border-radius: 25px;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
         }
 
         .status-dot {
-            width: 12px;
-            height: 12px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            background: var(--accent-gold);
             animation: pulse 2s infinite;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
         }
 
         @keyframes pulse {
-            0% { 
-                opacity: 1; 
-                transform: scale(1);
-                box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-            }
-            50% { 
-                opacity: 0.7; 
-                transform: scale(1.2);
-                box-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
-            }
-            100% { 
-                opacity: 1; 
-                transform: scale(1);
-                box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-            }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.2); }
         }
 
+        /* Main container */
         .container {
-            flex: 1;
             max-width: 1400px;
             margin: 0 auto;
-            padding: 2rem;
-            display: flex;
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
             gap: 2rem;
-            position: relative;
-            z-index: 5;
+            min-height: calc(100vh - 200px);
         }
 
-        .chat-container {
-            flex: 2;
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border-radius: 30px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        /* Chat section */
+        .chat-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
-            border: 1px solid var(--glass-border);
-            position: relative;
-            animation: containerFloat 6s ease-in-out infinite;
-        }
-
-        @keyframes containerFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .chat-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, var(--glass-bg), rgba(255, 255, 255, 0.05));
-            border-radius: 30px;
-            z-index: -1;
+            height: calc(100vh - 350px);
         }
 
         .chat-header {
-            background: linear-gradient(135deg, var(--primary-brown), var(--dark-brown));
-            color: var(--cream);
             padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-primary);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .chat-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            animation: headerShine 4s ease-in-out infinite;
-        }
-
-        @keyframes headerShine {
-            0% { left: -100%; }
-            50% { left: 100%; }
-            100% { left: 100%; }
         }
 
         .chat-header h2 {
             font-size: 1.5rem;
             font-weight: 600;
-            position: relative;
-            z-index: 2;
+            color: var(--text-primary);
         }
 
-        .header-controls {
+        .chat-controls {
             display: flex;
             align-items: center;
-            gap: 15px;
+            gap: 1rem;
         }
 
-        .json-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            color: var(--cream);
-            font-weight: 500;
-        }
-
-        .json-toggle input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--primary-brown);
-        }
-
-        .clear-btn {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
-            color: var(--cream);
-            padding: 0.8rem 1.5rem;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 500;
+        .toggle-switch {
             position: relative;
-            z-index: 2;
-            overflow: hidden;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
         }
 
-        .clear-btn::before {
-            content: '';
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
             position: absolute;
+            cursor: pointer;
             top: 0;
-            left: -100%;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--border-secondary);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: var(--text-primary);
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background: var(--accent-primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .control-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .control-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border-color: var(--border-secondary);
+        }
+
+        .feedback-btn {
+            background: var(--accent-primary);
+            border: 1px solid var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .feedback-btn:hover {
+            background: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+        }
+
+        /* Модальное окно обратной связи */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
         }
 
-        .clear-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 16px;
+            margin: 5% auto;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
         }
 
-        .clear-btn:hover::before {
-            left: 100%;
+        .close {
+            color: var(--text-secondary);
+            float: right;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            transition: color 0.2s ease;
+        }
+
+        .close:hover {
+            color: var(--text-primary);
+        }
+
+        .modal h3 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            resize: vertical;
+            min-height: 100px;
+            margin-bottom: 1rem;
+            font-family: inherit;
+        }
+
+        .modal textarea::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .modal textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .modal button {
+            background: var(--accent-primary);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
+        }
+
+        .modal button:hover {
+            background: var(--accent-secondary);
         }
 
         .chat-messages {
             flex: 1;
-            padding: 2rem;
+            padding: 1.5rem;
             overflow-y: auto;
-            max-height: 60vh;
-            background: linear-gradient(180deg, transparent, rgba(255, 248, 220, 0.05));
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-primary) transparent;
         }
 
         .chat-messages::-webkit-scrollbar {
-            width: 8px;
+            width: 6px;
         }
 
         .chat-messages::-webkit-scrollbar-track {
-            background: var(--glass-bg);
-            border-radius: 10px;
+            background: transparent;
         }
 
         .chat-messages::-webkit-scrollbar-thumb {
-            background: linear-gradient(45deg, var(--primary-brown), var(--light-brown));
-            border-radius: 10px;
+            background: var(--accent-primary);
+            border-radius: 3px;
         }
 
         .message {
-            margin-bottom: 2rem;
-            animation: messageSlideIn 0.6s ease-out;
-            position: relative;
+            margin-bottom: 1.5rem;
+            animation: messageSlide 0.3s ease-out;
         }
 
-        @keyframes messageSlideIn {
-            from { 
-                opacity: 0; 
-                transform: translateY(20px) scale(0.95); 
-            }
-            to { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
+        @keyframes messageSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .message.user {
@@ -357,299 +358,143 @@
         .message-content {
             display: inline-block;
             max-width: 80%;
-            padding: 1.5rem 2rem;
-            border-radius: 25px;
+            padding: 1rem 1.25rem;
+            border-radius: 16px;
             word-wrap: break-word;
-            line-height: 1.6;
-            position: relative;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .message-content:hover {
-            transform: translateY(-2px);
+            line-height: 1.5;
+            font-size: 0.95rem;
         }
 
         .message.user .message-content {
-            background: linear-gradient(135deg, var(--primary-brown), var(--dark-brown));
-            color: var(--cream);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .message.user .message-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-            border-radius: 25px;
-            animation: messageShine 3s ease-in-out infinite;
+            background: var(--accent-primary);
+            color: var(--text-primary);
+            border-bottom-right-radius: 4px;
         }
 
         .message.ai .message-content {
-            background: var(--glass-bg);
-            color: var(--dark-brown);
-            border: 1px solid var(--glass-border);
-            backdrop-filter: blur(15px);
-        }
-
-        .message.ai .message-content::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 248, 220, 0.1), rgba(255, 255, 255, 0.05));
-            border-radius: 25px;
-        }
-
-        @keyframes messageShine {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 1; }
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-primary);
+            border-bottom-left-radius: 4px;
         }
 
         .message-time {
-            font-size: 0.9rem;
-            color: var(--light-brown);
-            margin-top: 0.8rem;
-            font-weight: 300;
-            opacity: 0.8;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: 0.5rem;
+            opacity: 0.7;
         }
 
         .chat-input {
-            padding: 2rem;
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-top: 1px solid var(--glass-border);
-            position: relative;
-        }
-
-        .chat-input::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
-            animation: inputGlow 2s ease-in-out infinite;
-        }
-
-        @keyframes inputGlow {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
+            padding: 1.5rem 2rem;
+            border-top: 1px solid var(--border-primary);
+            background: var(--bg-tertiary);
         }
 
         .input-group {
             display: flex;
-            gap: 1.5rem;
+            gap: 1rem;
             align-items: center;
         }
 
         .message-input {
             flex: 1;
-            padding: 1.2rem 2rem;
-            border: 2px solid var(--glass-border);
-            border-radius: 30px;
-            font-size: 1.1rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
             outline: none;
-            transition: all 0.3s ease;
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            color: var(--dark-brown);
-            font-weight: 400;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
+            transition: all 0.2s ease;
+            font-family: inherit;
         }
 
         .message-input::placeholder {
-            color: var(--light-brown);
-            opacity: 0.7;
+            color: var(--text-tertiary);
         }
 
         .message-input:focus {
-            border-color: var(--gold);
-            box-shadow: 0 0 20px rgba(218, 165, 32, 0.3);
-            transform: translateY(-2px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(139, 69, 19, 0.1);
         }
 
         .send-btn {
-            background: linear-gradient(135deg, var(--primary-brown), var(--dark-brown));
+            background: var(--accent-primary);
             border: none;
-            color: var(--cream);
-            padding: 1.2rem 2.5rem;
-            border-radius: 30px;
+            color: var(--text-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 1.1rem;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-
-        .send-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            font-size: 0.95rem;
         }
 
         .send-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
-        }
-
-        .send-btn:hover::before {
-            left: 100%;
+            background: var(--accent-secondary);
+            transform: translateY(-1px);
         }
 
         .send-btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
 
+        /* Sidebar */
         .sidebar {
-            flex: 1;
-            background: var(--glass-bg);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            border-radius: 30px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-            padding: 2rem;
-            border: 1px solid var(--glass-border);
-            position: relative;
-            animation: sidebarFloat 8s ease-in-out infinite;
-        }
-
-        @keyframes sidebarFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-5px) rotate(0.5deg); }
-        }
-
-        .sidebar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, var(--glass-bg), rgba(255, 255, 255, 0.05));
-            border-radius: 30px;
-            z-index: -1;
-        }
-
-        .sidebar h3 {
-            color: var(--dark-brown);
-            margin-bottom: 1.5rem;
-            font-weight: 600;
-            font-size: 1.3rem;
-            text-align: center;
-            position: relative;
-        }
-
-        .sidebar h3::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 50px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .info-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(15px);
-            border-radius: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 12px;
             padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--glass-border);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .info-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 248, 220, 0.1), rgba(255, 255, 255, 0.05));
-            border-radius: 20px;
-            z-index: -1;
+            transition: all 0.2s ease;
         }
 
         .info-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+            border-color: var(--border-secondary);
+            transform: translateY(-2px);
         }
 
-        .info-card h4 {
-            color: var(--primary-brown);
-            margin-bottom: 0.8rem;
+        .info-card h3 {
             font-size: 1rem;
             font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
         }
 
         .info-card p {
-            color: var(--dark-brown);
-            font-size: 0.9rem;
+            color: var(--text-secondary);
             line-height: 1.5;
-            opacity: 0.9;
+            font-size: 0.9rem;
         }
 
         .loading {
             display: none;
             text-align: center;
             padding: 2rem;
-            color: var(--light-brown);
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            margin: 1rem;
-            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
         }
 
         .loading.show {
             display: block;
-            animation: loadingFadeIn 0.5s ease-in;
-        }
-
-        @keyframes loadingFadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .spinner {
             display: inline-block;
-            width: 30px;
-            height: 30px;
-            border: 3px solid var(--glass-border);
-            border-top: 3px solid var(--gold);
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-primary);
+            border-top: 2px solid var(--accent-primary);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-right: 1rem;
-            box-shadow: 0 0 10px rgba(218, 165, 32, 0.3);
+            margin-right: 0.5rem;
         }
 
         @keyframes spin {
@@ -658,261 +503,106 @@
         }
 
         .error {
-            background: linear-gradient(135deg, rgba(255, 235, 238, 0.8), rgba(255, 255, 255, 0.5));
-            color: #c62828;
-            padding: 1.5rem;
-            border-radius: 20px;
-            margin: 1rem;
-            border-left: 4px solid #c62828;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(198, 40, 40, 0.2);
-            animation: errorShake 0.5s ease-in-out;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-size: 0.9rem;
         }
 
-        @keyframes errorShake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .chat-section {
+                height: calc(100vh - 320px);
+            }
         }
 
         @media (max-width: 768px) {
             .container {
-                flex-direction: column;
                 padding: 1rem;
                 gap: 1rem;
             }
-            
-            .sidebar {
-                order: -1;
-                padding: 1.5rem;
-            }
-            
-            .message-content {
-                max-width: 95%;
-                padding: 1rem 1.5rem;
-                font-size: 0.95rem;
-            }
 
             .header {
-                padding: 1.5rem 1rem;
+                padding: 2rem 0 1rem;
             }
 
             .header h1 {
-                font-size: 1.8rem;
+                font-size: 2.5rem;
             }
 
             .status-bar {
                 flex-direction: column;
-                gap: 0.5rem;
-                align-items: center;
-            }
-
-            .status-indicator {
-                font-size: 0.9rem;
-            }
-
-            .chat-container, .sidebar {
-                border-radius: 20px;
+                gap: 0.75rem;
             }
 
             .chat-header {
                 padding: 1rem 1.5rem;
             }
 
-            .chat-header h2 {
-                font-size: 1.2rem;
-            }
-
             .chat-messages {
                 padding: 1rem;
-                max-height: 50vh;
             }
 
             .chat-input {
-                padding: 1rem;
-            }
-
-            .input-group {
-                gap: 1rem;
-            }
-
-            .message-input {
                 padding: 1rem 1.5rem;
-                font-size: 1rem;
-            }
-
-            .send-btn {
-                padding: 1rem 1.5rem;
-                font-size: 1rem;
-            }
-
-            .info-card {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
-
-            .info-card h4 {
-                font-size: 0.9rem;
-            }
-
-            .info-card p {
-                font-size: 0.8rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .container {
-                padding: 0.5rem;
-            }
-
-            .chat-container, .sidebar {
-                border-radius: 15px;
             }
 
             .message-content {
-                max-width: 98%;
-                padding: 0.8rem 1.2rem;
-                font-size: 0.9rem;
+                max-width: 90%;
+                padding: 0.875rem 1rem;
             }
 
-            .chat-messages {
-                padding: 0.8rem;
-                max-height: 45vh;
-            }
-
-            .chat-input {
-                padding: 0.8rem;
-            }
-
-            .message-input {
-                padding: 0.8rem 1.2rem;
-                font-size: 0.95rem;
-            }
-
-            .send-btn {
-                padding: 0.8rem 1.2rem;
-                font-size: 0.95rem;
-            }
-
-            .sidebar {
-                padding: 1rem;
-            }
-
-            .info-card {
-                padding: 0.8rem;
-            }
-        }
-
-        @media (max-width: 360px) {
-            .header h1 {
-                font-size: 1.3rem;
-            }
-
-            .container {
-                padding: 0.3rem;
-            }
-
-            .chat-container, .sidebar {
-                border-radius: 12px;
-            }
-
-            .message-content {
-                padding: 0.6rem 1rem;
-                font-size: 0.85rem;
-            }
-
-            .chat-messages {
-                padding: 0.6rem;
-                max-height: 40vh;
-            }
-
-            .chat-input {
-                padding: 0.6rem;
-            }
-
-            .message-input {
-                padding: 0.6rem 1rem;
-                font-size: 0.9rem;
-            }
-
-            .send-btn {
-                padding: 0.6rem 1rem;
-                font-size: 0.9rem;
-            }
-
-            .sidebar {
-                padding: 0.8rem;
-            }
-
-            .info-card {
-                padding: 0.6rem;
-            }
-
-            .info-card h4 {
-                font-size: 0.85rem;
-            }
-
-            .info-card p {
-                font-size: 0.75rem;
-            }
-        }
-
-        /* Landscape orientation for mobile */
-        @media (max-height: 500px) and (orientation: landscape) {
-            .header {
-                padding: 1rem;
-            }
-
-            .header h1 {
-                font-size: 1.5rem;
-            }
-
-            .chat-messages {
-                max-height: 30vh;
-            }
-
-            .container {
-                padding: 0.5rem;
+            .modal-content {
+                margin: 10% auto;
+                padding: 1.5rem;
+                width: 95%;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Floating particles -->
-    <div class="particles" id="particles"></div>
-    
-    <div class="header">
-        <h1>Локальный AI Ассистент</h1>
+    <header class="header">
+        <h1>Voicaj LLM</h1>
+        <p class="subtitle">Интеллектуальный анализ текста с структурированным выводом</p>
+        
         <div class="status-bar">
-            <div class="status-indicator">
+            <div class="status-item">
                 <div class="status-dot"></div>
-                <span>Ollama подключен</span>
+                <span>Система активна</span>
             </div>
-            <div>Модель: llama3.1:8b</div>
+            <div class="status-item">
+                <span>Модель: Rule-based LLM</span>
+            </div>
         </div>
-    </div>
+    </header>
 
     <div class="container">
-        <div class="chat-container">
+        <div class="chat-section">
             <div class="chat-header">
-                <h2>Чат с AI</h2>
-                <div class="header-controls">
-                    <label class="json-toggle">
+                <h2>Чат с Voicaj LLM</h2>
+                <div class="chat-controls">
+                    <label class="toggle-switch">
                         <input type="checkbox" id="jsonMode" onchange="toggleJsonMode()">
-                        <span>JSON Mode</span>
+                        <span class="slider"></span>
                     </label>
-                    <button class="clear-btn" onclick="clearHistory()">Очистить</button>
+                    <span style="font-size: 0.9rem; color: var(--text-secondary);">JSON Mode</span>
+                    <button class="control-btn" onclick="clearHistory()">Очистить</button>
+                    <button class="control-btn feedback-btn" onclick="showFeedbackModal()">Обратная связь</button>
                 </div>
             </div>
             
             <div class="chat-messages" id="chatMessages">
                 <div class="message ai">
                     <div class="message-content">
-                        Привет! Я ваш локальный AI ассистент. Все ваши данные остаются на вашем компьютере и не передаются в интернет. Чем могу помочь?
+                        Привет! Я Voicaj LLM - интеллектуальная система для анализа текста. Я могу определить типы задач, эмоции, привычки и многое другое. Включите JSON Mode для структурированного вывода.
                     </div>
                     <div class="message-time">Сейчас</div>
                 </div>
@@ -920,13 +610,13 @@
             
             <div class="loading" id="loading">
                 <div class="spinner"></div>
-                AI думает...
+                Voicaj LLM анализирует...
             </div>
             
             <div class="chat-input">
                 <div class="input-group">
                     <input type="text" class="message-input" id="messageInput" 
-                           placeholder="Введите ваш вопрос..." 
+                           placeholder="Введите ваш текст для анализа..." 
                            onkeypress="handleKeyPress(event)">
                     <button class="send-btn" id="sendBtn" onclick="sendMessage()">
                         Отправить
@@ -936,43 +626,88 @@
         </div>
 
         <div class="sidebar">
-            <h3>Информация</h3>
-            
             <div class="info-card">
-                <h4>Безопасность</h4>
-                <p>Все ваши данные обрабатываются локально. Никакая информация не передается в интернет.</p>
+                <h3>Как давать обратную связь</h3>
+                <div style="font-size: 0.85rem; line-height: 1.4;">
+                    <p style="margin-bottom: 0.75rem;"><strong>Будьте конкретными:</strong></p>
+                    <ul style="margin-left: 1rem; margin-bottom: 0.75rem;">
+                        <li>Указывайте конкретные поля: "описание", "дата", "теги", "заголовок"</li>
+                        <li>Объясняйте что не так: "описание слишком общее"</li>
+                        <li>Предлагайте исправления: "должно быть про продукты"</li>
+                    </ul>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>Примеры хорошей обратной связи:</strong></p>
+                    <div style="background: var(--bg-primary); padding: 0.5rem; border-radius: 6px; font-size: 0.8rem; margin-bottom: 0.75rem;">
+                        "описание неправильное - должно быть про разговор с друзьями о походе в горы, а не про встречу с родителями. дата неправильная - должно быть послезавтра, а не завтра. теги неправильные - должно быть про друзей и горы"
+                    </div>
+                    
+                    <p style="margin-bottom: 0.5rem;"><strong>Избегайте:</strong></p>
+                    <ul style="margin-left: 1rem;">
+                        <li>"неправильно", "плохо", "не то"</li>
+                        <li>Общие замечания без деталей</li>
+                        <li>Критику без предложений</li>
+                    </ul>
+                </div>
             </div>
             
             <div class="info-card">
-                <h4>Память</h4>
-                <p>AI запоминает ваши предыдущие разговоры в рамках текущей сессии.</p>
+                <h3>Безопасность</h3>
+                <p>Все данные обрабатываются локально. Никакая информация не передается в интернет.</p>
             </div>
             
             <div class="info-card">
-                <h4>Доступ</h4>
-                <p>Подключиться можно с любого устройства в вашей сети по IP адресу сервера.</p>
+                <h3>Интеллектуальный анализ</h3>
+                <p>Определяет типы задач, эмоции, привычки и извлекает метаданные из текста.</p>
             </div>
             
             <div class="info-card">
-                <h4>Производительность</h4>
-                <p>Модель работает на вашем компьютере с использованием локальных ресурсов.</p>
+                <h3>JSON Mode</h3>
+                <p>Структурированный вывод в формате JSON для интеграции с приложениями.</p>
             </div>
+            
+            <div class="info-card">
+                <h3>Производительность</h3>
+                <p>Rule-based модель работает мгновенно без внешних зависимостей.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно обратной связи -->
+    <div id="feedbackModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFeedbackModal()">&times;</span>
+            <h3>Обратная связь для обучения модели</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                Помогите улучшить Voicaj LLM! Опишите, что не понравилось в ответе модели.
+            </p>
+            
+            <div style="background: var(--bg-primary); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem;">
+                <p style="margin-bottom: 0.5rem; color: var(--accent-gold);"><strong>💡 Подсказка:</strong></p>
+                <p style="margin-bottom: 0.5rem;">Будьте конкретными! Указывайте поля и предлагайте исправления:</p>
+                <div style="background: var(--bg-secondary); padding: 0.5rem; border-radius: 4px; font-size: 0.8rem; color: var(--text-secondary);">
+                    "описание неправильное - должно быть про продукты, а не про встречу. дата неправильная - должно быть завтра, а не послезавтра. теги неправильные - должно быть 'покупки', 'дом'"
+                </div>
+            </div>
+            
+            <textarea id="feedbackText" placeholder="Например: описание слишком общее, дата неправильная, заголовок неточный..."></textarea>
+            <button onclick="submitFeedback()">Отправить обратную связь</button>
         </div>
     </div>
 
     <script>
         let isLoading = false;
         let jsonMode = false;
+        let lastUserInput = '';
+        let lastModelOutput = [];
 
         function toggleJsonMode() {
             jsonMode = document.getElementById('jsonMode').checked;
-            // Перезагружаем последние сообщения в новом режиме
             const messages = document.querySelectorAll('.message.ai');
             messages.forEach(message => {
                 const content = message.querySelector('.message-content');
                 if (content.dataset.originalJson) {
                     if (jsonMode) {
-                        content.innerHTML = `<pre>${content.dataset.originalJson}</pre>`;
+                        content.innerHTML = `<pre style="white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 0.9rem; color: var(--text-primary);">${content.dataset.originalJson}</pre>`;
                     } else {
                         content.innerHTML = content.dataset.formattedText;
                     }
@@ -992,11 +727,11 @@
             
             if (!message || isLoading) return;
             
-            // Добавляем сообщение пользователя
-            addMessageWithTyping(message, 'user');
-            input.value = '';
+            // Сохраняем последний ввод пользователя
+            lastUserInput = message;
             
-            // Показываем индикатор загрузки
+            addMessage(message, 'user');
+            input.value = '';
             setLoading(true);
             
             try {
@@ -1016,15 +751,15 @@
                 if (data.error) {
                     showError(data.error);
                 } else {
-                    // Handle response based on type
                     if (data.type === 'structured_json') {
-                        // JSON режим - показываем структурированные данные
                         const responseData = data.response;
+                        // Сохраняем последний вывод модели
+                        lastModelOutput = responseData;
+                        
                         const jsonString = JSON.stringify(responseData, null, 2);
                         let displayText = '';
                         
                         if (Array.isArray(responseData)) {
-                            // Multiple JSON objects
                             responseData.forEach((item, index) => {
                                 displayText += `[${index + 1}] ${item.title}\n`;
                                 displayText += `Тип: ${item.type}\n`;
@@ -1035,8 +770,7 @@
                                 displayText += '\n';
                             });
                         } else {
-                            // Single JSON object
-                            displayText += `📋 ${responseData.title}\n`;
+                            displayText += `${responseData.title}\n`;
                             displayText += `Тип: ${responseData.type}\n`;
                             if (responseData.description) displayText += `Описание: ${responseData.description}\n`;
                             if (responseData.priority) displayText += `Приоритет: ${responseData.priority}\n`;
@@ -1044,14 +778,12 @@
                             if (responseData.dueDate) displayText += `Срок: ${responseData.dueDate}\n`;
                         }
                         
-                        // Сохраняем оба варианта для переключения
-                        const messageElement = addMessageWithTyping(jsonMode ? jsonString : displayText.trim(), 'ai');
+                        const messageElement = addMessage(jsonMode ? jsonString : displayText.trim(), 'ai');
                         const contentElement = messageElement.querySelector('.message-content');
                         contentElement.dataset.originalJson = jsonString;
                         contentElement.dataset.formattedText = displayText.trim();
                     } else {
-                        // Обычный режим - показываем текст как есть
-                        addMessageWithTyping(data.response, 'ai');
+                        addMessage(data.response, 'ai');
                     }
                 }
             } catch (error) {
@@ -1079,6 +811,7 @@
             
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return messageDiv;
         }
 
         function setLoading(loading) {
@@ -1114,14 +847,14 @@
             }
             
             try {
-                const response = await fetch('/api/clear', {
+                const response = await fetch('/api/clear_history', {
                     method: 'POST'
                 });
                 
                 if (response.ok) {
                     const messagesContainer = document.getElementById('chatMessages');
                     messagesContainer.innerHTML = '';
-                    addMessageWithTyping('История очищена. Чем могу помочь?', 'ai');
+                    addMessage('История очищена. Чем могу помочь?', 'ai');
                 }
             } catch (error) {
                 showError('Ошибка при очистке истории');
@@ -1134,85 +867,64 @@
             return div.innerHTML;
         }
 
-        // Автофокус на поле ввода
-        document.getElementById('messageInput').focus();
-
-        // Create floating particles
-        function createParticles() {
-            const particlesContainer = document.getElementById('particles');
-            const particleCount = 50;
-
-            for (let i = 0; i < particleCount; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                
-                // Random size between 2px and 8px
-                const size = Math.random() * 6 + 2;
-                particle.style.width = size + 'px';
-                particle.style.height = size + 'px';
-                
-                // Random horizontal position
-                particle.style.left = Math.random() * 100 + '%';
-                
-                // Random animation delay
-                particle.style.animationDelay = Math.random() * 20 + 's';
-                
-                // Random animation duration
-                particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
-                
-                particlesContainer.appendChild(particle);
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('messageInput').focus();
+        });
+        
+        // Функции для обратной связи
+        function showFeedbackModal() {
+            if (!lastUserInput || !lastModelOutput.length) {
+                alert('Сначала отправьте сообщение, чтобы дать обратную связь');
+                return;
             }
+            document.getElementById('feedbackModal').style.display = 'block';
         }
-
-        // Initialize particles when page loads
-        document.addEventListener('DOMContentLoaded', createParticles);
-
-        // Add typing animation to AI messages
-        function typeMessage(element, text, speed = 30) {
-            element.textContent = '';
-            let i = 0;
-            const timer = setInterval(() => {
-                if (i < text.length) {
-                    element.textContent += text.charAt(i);
-                    i++;
+        
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').style.display = 'none';
+            document.getElementById('feedbackText').value = '';
+        }
+        
+        async function submitFeedback() {
+            const feedback = document.getElementById('feedbackText').value.trim();
+            if (!feedback) {
+                alert('Пожалуйста, введите обратную связь');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        user_input: lastUserInput,
+                        model_output: lastModelOutput,
+                        feedback: feedback
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Ошибка: ' + data.error);
                 } else {
-                    clearInterval(timer);
+                    alert('Спасибо за обратную связь! Модель будет улучшена.');
+                    closeFeedbackModal();
                 }
-            }, speed);
-        }
-
-        // Enhanced message adding with typing effect
-        function addMessageWithTyping(text, sender) {
-            const messagesContainer = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}`;
-            
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('ru-RU', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            
-            const messageContent = document.createElement('div');
-            messageContent.className = 'message-content';
-            
-            const messageTime = document.createElement('div');
-            messageTime.className = 'message-time';
-            messageTime.textContent = timeString;
-            
-            messageDiv.appendChild(messageContent);
-            messageDiv.appendChild(messageTime);
-            messagesContainer.appendChild(messageDiv);
-            
-            // Add typing effect for AI messages
-            if (sender === 'ai') {
-                typeMessage(messageContent, text);
-            } else {
-                messageContent.textContent = text;
+            } catch (error) {
+                alert('Ошибка отправки обратной связи');
             }
-            
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            return messageDiv;
+        }
+        
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('feedbackModal');
+            if (event.target === modal) {
+                closeFeedbackModal();
+            }
         }
     </script>
 </body>
